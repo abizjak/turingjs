@@ -1,0 +1,21 @@
+canvas {
+    background-color: #eeeeee;
+    border: 2px inset black;
+}
+
+#log-area {
+    float: left;
+    margin-left:40px;
+}
+
+#inputs {
+    float:left;
+}
+
+#input-machine-div {
+    float:left;
+}
+
+#input-tape-div {
+    float:left;
+}

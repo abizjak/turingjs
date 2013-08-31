@@ -1,0 +1,47 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+    <title> Turing machine simulator </title>
+    <meta name="description" content="Simple single-tape Turing machine simulator.">
+    <meta name="author" content="Aleš Bizjak <abizjak@cs.au.dk>">
+
+    <script type="text/javascript" src="turingjs.js"></script>
+
+    <link rel="stylesheet" href="pretty.css" type="text/css" />
+  </head>
+
+  <body>
+    <div id="canvas-div">
+      <canvas id="animation-canvas" height="100" width="800">
+      </canvas>
+    </div>
+    <div id="buttons">
+      <button id="read-button" type="button"> Read program </button>
+      <button id="step-button" type="button"> Step </button>
+      <button id="run-button" type="button"> Run </button>
+      <button id="left-button" type="button"> Left </button>
+      <button id="right-button" type="button"> Right </button>
+    </div>
+    <div id="inputs">
+      <div id="input-machine-div">
+        <h3> Transitions </h3>
+        <textarea id="input-machine" cols="30" rows="30"> </textarea>
+      </div>
+      <div id="input-tape-div">
+        <h3> Input </h3>
+        <input type="text" id="input" size="40" />
+      </div>
+    </div>
+    <div id="log-area">
+      <h3> Last message </h3>
+      <div id="current-message">
+      </div>
+      <h3> Log </h3>
+      <div id="log">
+      </div>
+    </div>
+  </body>
+</html>
