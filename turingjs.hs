@@ -6,9 +6,13 @@ import Haste.Graphics.Canvas
 
 import Data.IORef
 
+import Data.Text (Text, pack, append, empty)
+
 -- TODO: add special halt state
 
 import Text.Parsec hiding (State)
+
+import qualified Text.Parsec.Text as TT
 
 import qualified Data.Map as Map
 
@@ -16,7 +20,7 @@ import qualified Data.List as List
 
 data Move = L | R | S deriving (Show, Eq, Ord)
 
-newtype State = State String deriving (Show, Eq, Ord)
+newtype State = State Text deriving (Show, Eq, Ord)
 
 data Character = Character !Char | Blank deriving (Show, Eq, Ord)
 
@@ -24,26 +28,28 @@ type Transition = (State, Character, State, Character, Move)
 
 type Transitions = [Transition]
 
-separator :: Monad m => ParsecT String u m String
+inStateText = pack "In state "
+
+separator :: Monad m => ParsecT Text u m String
 separator = string "," <|> many1 space
 
-state :: Monad m => ParsecT String u m State
-state = many1 (letter <|> char '_' <|> digit) >>= return . State
+state :: Monad m => ParsecT Text u m State
+state = many1 (letter <|> char '_' <|> digit) >>= return . State . pack
 
-move :: Monad m => ParsecT String u m Move
+move :: Monad m => ParsecT Text u m Move
 move = do c <- char '<' <|> char '>' <|> char '!' <?> "Move has to be one of '<', '>' or '!'."
           case c of
             '<' -> return L
             '>' -> return R
             '!' -> return S
 
-character :: Monad m => ParsecT String u m Character
+character :: Monad m => ParsecT Text u m Character
 character = ((letter <|> digit) >>= return . Character) <|> (char '_' >> (return Blank))
 
-end :: Monad m => ParsecT String u m String
+end :: Monad m => ParsecT Text u m String
 end = many1 space
 
-transition :: Monad m => ParsecT String u m Transition
+transition :: Monad m => ParsecT Text u m Transition
 transition =
   do s <- state
      separator
@@ -56,15 +62,16 @@ transition =
      m <- move
      return (s, c, s', c', m)
 
-transitions :: Monad m => ParsecT String u m Transitions
+transitions :: Monad m => ParsecT Text u m Transitions
 transitions = spaces >> transition `sepEndBy` end
 
-parseTransitions :: String -> Either ParseError Transitions
+parseTransitions :: Text -> Either ParseError Transitions
 parseTransitions = runParser transitions () "machine box" 
 
-parseInput :: String -> Either ParseError [Character]
+parseInput :: Text -> Either ParseError [Character]
 parseInput = runParser inputParser () "input box"
-  where inputParser = many (alphaNum <|> char ' ' <|> char '_') >>=
+  where inputParse = many (alphaNum <|> char ' ' <|> char '_') :: Monad m => ParsecT Text u m [Char]
+        inputParser = inputParse >>=
                        \cs -> return $ List.map (\c -> if c == ' ' || c == '_' then Blank else Character c) cs
 
 type Delta = Map.Map (State, Character) (State, Character, Move)
@@ -105,7 +112,7 @@ run d = go
 --          _ -> undefined
 main = do
   machine <- newIORef Map.empty
-  input <- newIORef (0, [], State "", [])
+  input <- newIORef (0, [], State empty, [])
   withElems ["read-button",
              "step-button",
              "run-button",
@@ -142,7 +149,7 @@ drawConfig (x, y) minx maxx (pos, ls, State q, rs) =
   do mapM_ (\(xc, yc) -> drawTapeSquare (x == xc) (xc, yc)) centers
      mapM_ (uncurry drawChar) $ joinSquareSymbol centersl ls
      mapM_ (uncurry drawChar) $ joinSquareSymbol centersr rs
-     font "20px Bitstream Vera" $ text (x, y + 4 * squareSize) ("In state " ++ q)
+     font "20px Bitstream Vera" $ text (x, y + 4 * squareSize) (show $ inStateText `append` q)
      
 -- TODO, read widths of canvas as properties
 handler :: IORef Delta -> IORef Config -> [Elem] -> IO ()
@@ -185,14 +192,14 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
           Just trans <- getValue imachine
           Just inpt <- getValue input
 
-          case parseTransitions trans of
+          case parseTransitions $ pack trans of
             Left pe -> setLogs $  show pe
             Right [] -> setLogs $ "Machine has to have at least one transition."
             Right (ptrans@((q,_,_,_,_) : _)) ->
               do 
                  writeIORef machine (buildMap ptrans)
                  setLogs ("Successfully read machine transitions. All " ++ show (length ptrans) ++ " of them.")                    
-                 case parseInput inpt of 
+                 case parseInput $ pack inpt of 
                    Left pe -> setLogs (show pe)
                    Right pinpt -> do writeIORef halted False
                                      writeIORef cfg (0, [], q, pinpt)
@@ -210,17 +217,17 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
                    (addToLog $
                                  ("Current config: " ++ 
                                  (List.reverse $ charsToString ls) ++
-                                 "(" ++ q ++ ")" ++ (charsToString rs)))
+                                 "(" ++ show q ++ ")" ++ (charsToString rs)))
               NoTransition (_, ls, State q, rs) 
                 -> do writeIORef halted True
                       addToLog $ ("Halted in state: " ++ 
                                  (List.reverse $ charsToString ls) ++
-                                "(" ++ q ++ ")" ++ (charsToString rs))
+                                "(" ++ show q ++ ")" ++ (charsToString rs))
               MovedOffTape (_, ls, State q, rs) 
                 -> do writeIORef halted True
                       addToLog $ ("Moved off tape on the left in state: " ++ 
                                  (List.reverse $ charsToString ls) ++
-                                 "(" ++ q ++ ")" ++ (charsToString rs))
+                                 "(" ++ show q ++ ")" ++ (charsToString rs))
             else setCurrent "Machine halted!"
 
         left update = do
