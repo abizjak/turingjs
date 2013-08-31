@@ -1,4 +1,6 @@
-module Main where
+{-# LANGUAGE BangPatterns #-}
+
+module Main (main) where
 
 import Haste
 
@@ -6,11 +8,11 @@ import Haste.Graphics.Canvas
 
 import Data.IORef
 
+import Data.Char (isAlphaNum, isSpace, isAlpha)
+
 -- TODO: add special halt state
 
-import Text.Parsec hiding (State)
-
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 import qualified Data.List as List
 
@@ -24,53 +26,87 @@ type Transition = (State, Character, State, Character, Move)
 
 type Transitions = [Transition]
 
-separator :: Monad m => ParsecT String u m String
-separator = string "," <|> many1 space
+data Pos = Pos !Int !Int
 
-state :: Monad m => ParsecT String u m State
-state = many1 (letter <|> char '_' <|> digit) >>= return . State
+data ParseState = ParseState !String !Pos
 
-move :: Monad m => ParsecT String u m Move
-move = do c <- char '<' <|> char '>' <|> char '!' <?> "Move has to be one of '<', '>' or '!'."
-          case c of
-            '<' -> return L
-            '>' -> return R
-            '!' -> return S
+prependPos (Pos x y) s = "At line " ++ show x ++ ", column " ++ show y ++ ": " ++ s
 
-character :: Monad m => ParsecT String u m Character
-character = ((letter <|> digit) >>= return . Character) <|> (char '_' >> (return Blank))
+parseError p s = Left $ prependPos p s
 
-end :: Monad m => ParsecT String u m String
-end = many1 space
+dropP :: (Char -> Bool) -> ParseState -> ParseState
+dropP p (ps@(ParseState (s:ss) (Pos x y))) | p s = 
+  if s == '\n' then dropP p (ParseState ss (Pos (x + 1) 0)) 
+  else dropP p (ParseState ss (Pos x (y + 1)))
+dropP _ ps = ps
 
-transition :: Monad m => ParsecT String u m Transition
-transition =
-  do s <- state
-     separator
-     c <- character
-     separator
-     s' <- state
-     separator
-     c' <- character
-     separator
-     m <- move
-     return (s, c, s', c', m)
+spanP :: (Char -> Bool) -> ParseState -> (String, ParseState)
+spanP p ps@(ParseState (s:ss) (Pos x y)) | p s =
+          let (ys,zs) = if s == '\n' then spanP p (ParseState ss (Pos (x + 1) 0))
+                        else (spanP p (ParseState ss (Pos x (y + 1)))) in 
+              (s : ys, zs)
+spanP _ ps              =  ([], ps)
 
-transitions :: Monad m => ParsecT String u m Transitions
-transitions = spaces >> transition `sepEndBy` end
+separator :: ParseState -> ParseState
+separator = dropP (\x -> x == ',' || isSpace x)
 
-parseTransitions :: String -> Either ParseError Transitions
-parseTransitions = runParser transitions () "machine box" 
+state :: ParseState -> Either String (State, ParseState)
+state s@(ParseState _ p) = 
+    let (q, r) = spanP isAlphaNum s in
+    case q of 
+      [] -> parseError p "State has to consist of at least one alphanumeric character." 
+      _ -> return (State q, r)
 
-parseInput :: String -> Either ParseError [Character]
-parseInput = runParser inputParser () "input box"
-  where inputParser = many (alphaNum <|> char ' ' <|> char '_') >>=
-                       \cs -> return $ List.map (\c -> if c == ' ' || c == '_' then Blank else Character c) cs
+move :: ParseState -> Either String (Move, ParseState)
+move (ParseState (h : t) p@(Pos x y)) = 
+  case h of
+    '<' -> return (L, ParseState t (Pos x (y + 1)))
+    '>' -> return (R, ParseState t (Pos x (y + 1)))
+    '!' -> return (S, ParseState t (Pos x (y + 1)))
+    _ -> parseError p "Move has to be one of `<', `>' or `!'."
+move (ParseState _ p) = parseError p "Empty input. Expecting `<', `>' or `!'."
+ 
+character :: ParseState -> Either String (Character, ParseState)
+character (ParseState (h:s) p@(Pos x y)) =
+    if isAlphaNum h then return (Character h, ParseState s (Pos x (y + 1)))
+    else if h == '_' then return (Blank, ParseState s (Pos x (y + 1)))
+         else (parseError p $ "Expecting character, got `" ++ [h] ++ "'")
+
+end :: ParseState -> Either String ParseState
+end ps@(ParseState (h : s) _) | isSpace h = return $! dropP isSpace ps
+end (ParseState _ p) = parseError p "Transitions have to be separated by at least one whitespace characer."
+
+transition :: ParseState -> Either String (Transition, ParseState)
+transition s = do
+      (q, s1) <- state s
+      (c, s2) <- character (separator s1)
+      (q', s3) <- state (separator s2)
+      (c', s4) <- character (separator s3)
+      (m, s5) <- move (separator s4)
+      return ((q, c, q', c', m), s5)
+
+transitions :: String -> Either String Transitions
+transitions = go . dropP isSpace . \x -> ParseState x (Pos 1 0)
+  where go (ParseState [] _) = return []
+        go xs = do (t, xs') <- transition xs
+                   case xs' of 
+                     (ParseState [] _) -> return [t]
+                     _ -> do rest <- end xs'
+                             ts <- go rest
+                             return (t : ts)
+
+parseTransitions :: String -> Either String Transitions
+parseTransitions s = case transitions s of 
+                       Left x -> Left x
+                       Right ts -> return ts
+
+parseInput :: String -> Either String [Character]
+parseInput = Right . List.map (\c -> if c == ' ' || c == '_' then Blank else Character c)
 
 type Delta = Map.Map (State, Character) (State, Character, Move)
 
 buildMap :: Transitions -> Delta
-buildMap = List.foldl (\map (s, c, s', c', m) -> Map.insert (s, c) (s', c', m) map) Map.empty
+buildMap = List.foldl' (\map (s, c, s', c', m) -> Map.insert (s, c) (s', c', m) map) Map.empty
 
 type Position = Integer
 
@@ -124,11 +160,11 @@ drawTapeSquare highlight (x, y) =
   let clr = if highlight then RGB 255 0 0 else RGB 0 0 0
       rct = rect (x - squareSize, y - squareSize) (x + squareSize, y + squareSize) in 
   if highlight then 
-    (color (RGB 255 255 255) . fill $ rct) >> (color clr . stroke $ rct)
-  else (color clr . stroke $ rct)
+    (color (RGB 255 255 255) . fill $! rct) >> (color clr . stroke $! rct)
+  else (color clr . stroke $! rct)
 
-drawChar (x, y) (Character c) = font "20px Bitstream Vera" $ text (x-7, y+7) [c]
-drawChar (x, y) Blank = font "20px Bitstream Vera" $ text (x-7, y+7) " "
+drawChar (x, y) (Character c) = font "20px Bitstream Vera" $! text (x-7, y+7) [c]
+drawChar (x, y) Blank = font "20px Bitstream Vera" $! text (x-7, y+7) " "
 
 joinSquareSymbol [] [] = []
 joinSquareSymbol (x:xs) [] = (x, Blank) : joinSquareSymbol xs []
@@ -136,13 +172,13 @@ joinSquareSymbol (x:xs) (c:cs) = (x, c) : joinSquareSymbol xs cs
 joinSquareSymbol [] _ = []
 
 drawConfig (x, y) minx maxx (pos, ls, State q, rs) =
-  let centersl = List.map (\x -> (x, y)) $ take (fromIntegral pos) (takeWhile (>= minx) (iterate (\x -> x - 2 * squareSize) (x - 2 * squareSize))) 
-      centersr = List.map (\x -> (x, y)) $ takeWhile (<= maxx) (iterate (+ (2 * squareSize)) x)
+  let centersl = List.map (\x -> (x, y)) $! take (fromIntegral pos) (takeWhile (>= minx) (iterate (\x -> x - 2 * squareSize) (x - 2 * squareSize))) 
+      centersr = List.map (\x -> (x, y)) $! takeWhile (<= maxx) (iterate (+ (2 * squareSize)) x)
       centers = reverse centersl ++ centersr in
   do mapM_ (\(xc, yc) -> drawTapeSquare (x == xc) (xc, yc)) centers
-     mapM_ (uncurry drawChar) $ joinSquareSymbol centersl ls
-     mapM_ (uncurry drawChar) $ joinSquareSymbol centersr rs
-     font "20px Bitstream Vera" $ text (x, y + 4 * squareSize) ("In state " ++ q)
+     mapM_ (uncurry drawChar) $! joinSquareSymbol centersl ls
+     mapM_ (uncurry drawChar) $! joinSquareSymbol centersr rs
+     font "20px Bitstream Vera" $! text (x, y + 4 * squareSize) ("In state " ++ q)
      
 -- TODO, read widths of canvas as properties
 handler :: IORef Delta -> IORef Config -> [Elem] -> IO ()
@@ -157,38 +193,38 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
     onEvent leftb OnClick (\_ _ -> left (updateCanvas maxx maxy cnvs))
     onEvent rightb OnClick (\_ _ -> right (updateCanvas maxx maxy cnvs))
     return ()
-  where updateCanvas maxx maxy cnvs = do
+  where updateCanvas !maxx !maxy !cnvs = do
           readIORef cfg >>= render cnvs . drawConfig (maxx `div` 2, maxy `div` 2) 0 maxx
 
-        newParagraph s = do
+        newParagraph !s = do
           np <- newElem "p"
           setProp np "innerHTML" s
           return np
 
-        setLog s = do
+        setLog !s = do
           np <- newParagraph s
           setChildren log [np]
 
-        setLogs s = setCurrent s >> setLog s
+        setLogs !s = setCurrent s >> setLog s
 
-        setCurrent s = do 
+        setCurrent !s = do 
           np <- newParagraph s
           setChildren curr [np]
 
-        addToLog s = do
+        addToLog !s = do
           nplog <- newParagraph s
           addChild nplog log
           npcurr <- newParagraph s
           setChildren curr [npcurr]
 
-        readInputs halted update = do
-          Just trans <- getValue imachine
-          Just inpt <- getValue input
+        readInputs !halted !update = do
+          Just !trans <- getValue imachine
+          Just !inpt <- getValue input
 
           case parseTransitions trans of
-            Left pe -> setLogs $  show pe
-            Right [] -> setLogs $ "Machine has to have at least one transition."
-            Right (ptrans@((q,_,_,_,_) : _)) ->
+            Left pe -> setLogs $! show pe
+            Right [] -> setLogs $! "Machine has to have at least one transition."
+            Right (!ptrans@((q,_,_,_,_) : _)) ->
               do 
                  writeIORef machine (buildMap ptrans)
                  setLogs ("Successfully read machine transitions. All " ++ show (length ptrans) ++ " of them.")                    
@@ -199,7 +235,7 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
                                      addToLog "Successfully read input."
                                      update
 
-        makeStep halted update = do
+        makeStep !halted !update = do
           h <- readIORef halted
           if (not h) then do
             delta <- readIORef machine
@@ -207,23 +243,23 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
             case step delta config of
               OK (config@(_, ls, State q, rs)) 
                 -> writeIORef cfg config >> update >>
-                   (addToLog $
+                   (addToLog $!
                                  ("Current config: " ++ 
-                                 (List.reverse $ charsToString ls) ++
+                                 (List.reverse $! charsToString ls) ++
                                  "(" ++ q ++ ")" ++ (charsToString rs)))
               NoTransition (_, ls, State q, rs) 
                 -> do writeIORef halted True
-                      addToLog $ ("Halted in state: " ++ 
-                                 (List.reverse $ charsToString ls) ++
+                      addToLog $! ("Halted in state: " ++ 
+                                 (List.reverse $! charsToString ls) ++
                                 "(" ++ q ++ ")" ++ (charsToString rs))
               MovedOffTape (_, ls, State q, rs) 
                 -> do writeIORef halted True
-                      addToLog $ ("Moved off tape on the left in state: " ++ 
-                                 (List.reverse $ charsToString ls) ++
+                      addToLog $! ("Moved off tape on the left in state: " ++ 
+                                 (List.reverse $! charsToString ls) ++
                                  "(" ++ q ++ ")" ++ (charsToString rs))
             else setCurrent "Machine halted!"
 
-        left update = do
+        left !update = do
           (pos, ll, q, lr) <- readIORef cfg
           if pos > 0 then
             (case ll of
@@ -231,19 +267,18 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
                (l : ll) -> writeIORef cfg (pos-1, ll, q, l : lr)) >> update
           else return ()
 
-        right update = do
+        right !update = do
           (pos, ll, q, lr) <- readIORef cfg
           (case lr of
               [] -> writeIORef cfg (pos+1, Blank : ll, q, [])
               (r : lr) -> writeIORef cfg (pos+1, r : ll, q, lr)) >> update
         
-        runWithPause delay halted update = go
+        runWithPause !delay !halted !update = go
           where go = do h <- readIORef halted
                         if not h then do
                           makeStep halted update
-                          setTimeout delay $ go
+                          setTimeout delay $! go
                         else return ()
-
   
 charsToString :: [Character] -> String
 charsToString = List.map (\x -> case x of 
