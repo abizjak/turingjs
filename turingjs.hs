@@ -145,8 +145,10 @@ main = do
   withElems ["read-button",
              "step-button",
              "run-button",
+             "stop-button",
              "left-button",
              "right-button",
+             "delay",
              "animation-canvas",
              "input-machine",
              "input",
@@ -182,14 +184,16 @@ drawConfig (x, y) minx maxx (pos, ls, State q, rs) =
      
 -- TODO, read widths of canvas as properties
 handler :: IORef Delta -> IORef Config -> [Elem] -> IO ()
-handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = do
+handler machine cfg [rb,sb,runb,stopb,leftb,rightb,delay,canvas,imachine,input,log,curr] = do
     Just cnvs <- getCanvas canvas
     halted <- newIORef False
+    stop <- newIORef True
     maxy <- fmap read (getProp canvas "height") :: IO Int
     maxx <- fmap read (getProp canvas "width") :: IO Int
-    onEvent rb OnClick (\_ _ -> readInputs halted (updateCanvas maxx maxy cnvs))
+    onEvent rb OnClick (\_ _ -> readInputs stop halted (updateCanvas maxx maxy cnvs))
     onEvent sb OnClick (\_ _ -> makeStep halted (updateCanvas maxx maxy cnvs))
-    onEvent runb OnClick (\_ _ -> runWithPause 500 halted (updateCanvas maxx maxy cnvs))
+    onEvent runb OnClick (\_ _ -> runWithPause stop delay halted (updateCanvas maxx maxy cnvs))
+    onEvent stopb OnClick (\_ _ -> stopRun stop)
     onEvent leftb OnClick (\_ _ -> left (updateCanvas maxx maxy cnvs))
     onEvent rightb OnClick (\_ _ -> right (updateCanvas maxx maxy cnvs))
     return ()
@@ -217,9 +221,14 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
           npcurr <- newParagraph s
           setChildren curr [npcurr]
 
-        readInputs !halted !update = do
+        readInputs !stop !halted !update = do
           Just !trans <- getValue imachine
           Just !inpt <- getValue input
+          stp <- readIORef stop
+          if not stp then do
+            writeIORef stop True
+            setTimeout 100 $ readInputs stop halted update
+          else return ()
 
           case parseTransitions trans of
             Left pe -> setLogs $! show pe
@@ -273,12 +282,22 @@ handler machine cfg [rb,sb,runb,leftb,rightb,canvas,imachine,input,log,curr] = d
               [] -> writeIORef cfg (pos+1, Blank : ll, q, [])
               (r : lr) -> writeIORef cfg (pos+1, r : ll, q, lr)) >> update
         
-        runWithPause !delay !halted !update = go
-          where go = do h <- readIORef halted
-                        if not h then do
-                          makeStep halted update
-                          setTimeout delay $! go
-                        else return ()
+        stopRun !stop = do
+           writeIORef stop True
+
+        runWithPause !stop delay !halted !update = do
+          delta <- fmap read $ getProp delay "value" :: IO Double
+          writeIORef stop False
+          go (round (1000 * delta))
+          where go delta = do 
+                  s <- readIORef stop
+                  if s then return ()
+                  else do
+                    h <- readIORef halted
+                    if not h then do
+                      makeStep halted update
+                      setTimeout delta $! (go delta)
+                    else return ()
   
 charsToString :: [Character] -> String
 charsToString = List.map (\x -> case x of 
