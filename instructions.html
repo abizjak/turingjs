@@ -13,7 +13,7 @@
   </head>
 
   <body>
-    <div id="canvas-div">
+    <div id="machine-format">
       <h3> Machine format </h3>
       
       <p>The transitions are entered as quintuples of the form
@@ -33,11 +33,50 @@
       <p> The meaning of the quintuple <code> (q, c, q', c', m) </code> is do
         define the transition "when in state q and looking at character c,
         transition to state q', writing character c' and moving in direction
-        m". </p>
+        m". Underscore '_' is interpreted as the blank character. </p>
 
       <p> Different transitions have to be separated by at least one whitespace
         character and the last one has to be followed by at least one whitespace
         character as well</p>
+    </div>
+    <div id="how-to-use">
+      <h3> How to use </h3>
+      <ul>
+        <li> Write (or paste) the machine instructions into the obvious
+        text-area. </li>
+        <li> Possibly write some input into the input box (here blanks are
+        entered as spaces) </li>
+        <li> Either step manually through the execution (button Step) or run
+          automatically. The delay between steps can be adjusted using the
+          slider. </li>
+      </ul>
+    </div>
+    <div id="example">
+      <h3> Example machine (successor of a binary number) </h3>
+      <table id="examples-table">
+        <tr> <td> Machine instructions </td> <td> Input (note the leading space) </td></tr>
+        <tr>
+          <td>
+<pre class="table-pre">1,_ 2,_,>
+2,1 2,1,>
+2,0 3,0,!
+2,_ 4,0,<
+4,1 4,0,<
+4,0 4,0,<
+4,_ 7,_,>
+7,0 H,1,<
+3,0 3,0,>
+3,1 3,1,>
+3,_ 5,_,<
+5,0 6,1,<
+5,1 5,0,<
+6,1 6,1,<
+6,0 6,0,<
+6,_ H,_,!
+           </pre>
+          </td>
+          <td> <pre class="table-pre"> 11111001111</pre> </td></tr>
+      </table>
     </div>
   </body>
 </html>

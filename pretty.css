@@ -19,3 +19,31 @@ canvas {
 #input-tape-div {
     float:left;
 }
+
+#machine-format {
+    width:400px;
+    float:left;
+}
+
+#how-to-use {
+    width:400px;
+    margin-left:50px;
+    float:left;
+}
+
+#example {
+    margin-left: 50px;
+    width: 300px;
+    float: left;
+    border: solid;
+    background-color: #dfdfdf;
+    padding:10px;
+}
+
+.table-pre {
+    background-color: white;
+}
+
+td {
+    vertical-align:top;
+}
