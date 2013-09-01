@@ -1,3 +1,8 @@
+body {
+    font-family:monospace;
+    font-size:12px;
+}
+
 canvas {
     background-color: #eeeeee;
     border: 2px inset black;
@@ -34,10 +39,13 @@ canvas {
 #instructions {
     width:900px;
     height:400px;
+    border: solid 2px;
 }
 
 #examples {
+    margin-top:50px;
     width:900px;
+    
 }
 
 #example-1 {
