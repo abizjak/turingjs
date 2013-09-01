@@ -68,9 +68,9 @@ move (ParseState _ p) = parseError p "Empty input. Expecting `<', `>' or `!'."
  
 character :: ParseState -> Either String (Character, ParseState)
 character (ParseState (h:s) p@(Pos x y)) =
-    if isAlphaNum h then return (Character h, ParseState s (Pos x (y + 1)))
-    else if h == '_' then return (Blank, ParseState s (Pos x (y + 1)))
-         else (parseError p $ "Expecting character, got `" ++ [h] ++ "'")
+    if not (isSpace h) && not (h == ',') then 
+      return (if h == '_' then Blank else Character h, ParseState s (Pos x (y + 1)))
+    else (parseError p $ "Expecting character, got `" ++ [h] ++ "'")
 
 end :: ParseState -> Either String ParseState
 end ps@(ParseState (h : s) _) | isSpace h = return $! dropP isSpace ps
