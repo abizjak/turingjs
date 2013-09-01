@@ -1,0 +1,43 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+    <title> Turing machine simulator instructions </title>
+    <meta name="description" content="Simple single-tape Turing machine
+                                      simulator instructions.">
+    <meta name="author" content="Aleš Bizjak <abizjak@cs.au.dk>">
+
+    <link rel="stylesheet" href="pretty.css" type="text/css" />
+  </head>
+
+  <body>
+    <div id="canvas-div">
+      <h3> Machine format </h3>
+      
+      <p>The transitions are entered as quintuples of the form
+      
+        <code> State Sep Char Sep State Sep Char Sep Move </code>
+        where 
+      </p>
+      <ul>
+        <li> <code> State </code>
+          can be any nonzero alphanumeric character </li>
+        <li> <code> Sep </code> is any nonzero sequence of commas or
+          whitespaces</li>
+        <li> <code> Char </code> is any character that does not match Sep </li>
+        <li> <code> Move </code> is one of '&gt;', '&lt;' or '!' </li> 
+      </ul>
+      
+      <p> The meaning of the quintuple <code> (q, c, q', c', m) </code> is do
+        define the transition "when in state q and looking at character c,
+        transition to state q', writing character c' and moving in direction
+        m". </p>
+
+      <p> Different transitions have to be separated by at least one whitespace
+        character and the last one has to be followed by at least one whitespace
+        character as well</p>
+    </div>
+  </body>
+</html>
