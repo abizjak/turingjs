@@ -13,47 +13,50 @@
   </head>
 
   <body>
-    <div id="machine-format">
-      <h3> Machine format </h3>
-      
-      <p>The transitions are entered as quintuples of the form
-      
-        <code> State Sep Char Sep State Sep Char Sep Move </code>
-        where 
-      </p>
-      <ul>
-        <li> <code> State </code>
-          can be any nonzero alphanumeric character </li>
-        <li> <code> Sep </code> is any nonzero sequence of commas or
-          whitespaces</li>
-        <li> <code> Char </code> is any character that does not match Sep </li>
-        <li> <code> Move </code> is one of '&gt;', '&lt;' or '!' </li> 
-      </ul>
-      
-      <p> The meaning of the quintuple <code> (q, c, q', c', m) </code> is do
-        define the transition "when in state q and looking at character c,
-        transition to state q', writing character c' and moving in direction
-        m". Underscore '_' is interpreted as the blank character. </p>
+    <div id="instructions">
+      <div id="machine-format">
+        <h3> Machine format </h3>
+        
+        <p>The transitions are entered as quintuples of the form
+          
+          <code> State Sep Char Sep State Sep Char Sep Move </code>
+          where 
+        </p>
+        <ul>
+          <li> <code> State </code>
+            can be any nonzero alphanumeric character </li>
+          <li> <code> Sep </code> is any nonzero sequence of commas or
+            whitespaces</li>
+          <li> <code> Char </code> is any character that does not match Sep </li>
+          <li> <code> Move </code> is one of '&gt;', '&lt;' or '!' </li> 
+        </ul>
+        
+        <p> The meaning of the quintuple <code> (q, c, q', c', m) </code> is do
+          define the transition "when in state q and looking at character c,
+          transition to state q', writing character c' and moving in direction
+          m". Underscore '_' is interpreted as the blank character. </p>
 
-      <p> Different transitions have to be separated by at least one whitespace
-        character and the last one has to be followed by at least one whitespace
-        character as well</p>
+        <p> Different transitions have to be separated by at least one whitespace
+          character and the last one has to be followed by at least one whitespace
+          character as well</p>
+      </div>
+      <div id="how-to-use">
+        <h3> How to use </h3>
+        <ul>
+          <li> Write (or paste) the machine instructions into the obvious
+            text-area. </li>
+          <li> Possibly write some input into the input box (here blanks are
+            entered as spaces) </li>
+          <li> Either step manually through the execution (button Step) or run
+            automatically. The delay between steps can be adjusted using the
+            slider. </li>
+        </ul>
+      </div>
     </div>
-    <div id="how-to-use">
-      <h3> How to use </h3>
-      <ul>
-        <li> Write (or paste) the machine instructions into the obvious
-        text-area. </li>
-        <li> Possibly write some input into the input box (here blanks are
-        entered as spaces) </li>
-        <li> Either step manually through the execution (button Step) or run
-          automatically. The delay between steps can be adjusted using the
-          slider. </li>
-      </ul>
-    </div>
-    <div id="example">
+    <div id="examples">
+    <div id="example-1">
       <h3> Example machine (successor of a binary number) </h3>
-      <table id="examples-table">
+      <table id="examples-table-1">
         <tr> <td> Machine instructions </td> <td> Input (note the leading space) </td></tr>
         <tr>
           <td>
@@ -77,6 +80,48 @@
           </td>
           <td> <pre class="table-pre"> 11111001111</pre> </td></tr>
       </table>
+    </div>
+
+    <div id="example-2">
+      <h3> Example machine (predecessor of a binary number) </h3>
+      <table id="examples-table-2">
+        <tr> <td> Machine instructions </td> <td> Input (note the leading space) </td></tr>
+        <tr>
+          <td>
+<pre class="table-pre">1,_ 2,_,>
+2,0 H,0,<
+2,1 3,1,>
+3,0 3,0,>
+3,1 3,1,>
+3,_ 4,_,<
+4,0 4,1,<
+4,1 5,0,<
+5,1 6,1,<
+5,0 6,0,<
+6,0 6,0,<
+6,1 6,1,<
+6,_ H,_,!
+
+5,_ 7,_,>
+7,0 8,_,>
+8,_ 9,_,<
+9,_ H,_,<
+8,1 10,1,!
+10,1 11,_,<
+11,_ 12,1,>
+12,_ 10,_,>
+10,0 13,_,<
+13,_ 12,0,>
+12,_ 10,_,>
+10,_ 14,_,<
+14,0 14,0,<
+14,1 14,1,<
+14,_ H,_,! 
+</pre>
+          </td>
+          <td> <pre class="table-pre"> 100000</pre> </td></tr>
+      </table>
+    </div>
     </div>
   </body>
 </html>

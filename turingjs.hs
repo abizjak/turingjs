@@ -266,7 +266,9 @@ handler machine cfg [rb,sb,runb,stopb,leftb,rightb,delay,canvas,imachine,input,l
                       addToLog $! ("Moved off tape on the left in state: " ++ 
                                  (List.reverse $! charsToString ls) ++
                                  "(" ++ q ++ ")" ++ (charsToString rs))
-            else setCurrent "Machine halted!"
+            else do 
+              (_, _, State q, _) <- readIORef cfg 
+              setCurrent ("Machine halted in state '" ++ q ++ "'.")
 
         left !update = do
           (pos, ll, q, lr) <- readIORef cfg

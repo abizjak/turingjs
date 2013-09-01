@@ -31,7 +31,25 @@ canvas {
     float:left;
 }
 
-#example {
+#instructions {
+    width:900px;
+    height:400px;
+}
+
+#examples {
+    width:900px;
+}
+
+#example-1 {
+    margin-left: 50px;
+    width: 300px;
+    float: left;
+    border: solid;
+    background-color: #dfdfdf;
+    padding:10px;
+}
+
+#example-2 {
     margin-left: 50px;
     width: 300px;
     float: left;
