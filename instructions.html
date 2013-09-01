@@ -24,17 +24,17 @@
         </p>
         <ul>
           <li> <code> State </code>
-            can be any nonzero alphanumeric character </li>
-          <li> <code> Sep </code> is any nonzero sequence of commas or
+            can be any nonempty string of alphanumeric characters </li>
+          <li> <code> Sep </code> is any nonempty sequence of commas or
             whitespaces</li>
           <li> <code> Char </code> is any character that does not match Sep </li>
           <li> <code> Move </code> is one of '&gt;', '&lt;' or '!' </li> 
         </ul>
         
-        <p> The meaning of the quintuple <code> (q, c, q', c', m) </code> is do
+        <p> The meaning of the quintuple <code> (q, c, q', c', m) </code> is txo
           define the transition "when in state q and looking at character c,
           transition to state q', writing character c' and moving in direction
-          m". Underscore '_' is interpreted as the blank character. </p>
+          m". Underscore '_' is interpreted as the blank. </p>
 
         <p> Different transitions have to be separated by at least one whitespace
           character and the last one has to be followed by at least one whitespace
