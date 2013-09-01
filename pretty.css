@@ -26,11 +26,13 @@ canvas {
 }
 
 #machine-format {
+    padding:10px;
     width:400px;
     float:left;
 }
 
 #how-to-use {
+    padding:10px;
     width:400px;
     margin-left:50px;
     float:left;
