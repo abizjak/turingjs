@@ -54,7 +54,7 @@ state :: ParseState -> Either String (State, ParseState)
 state s@(ParseState _ p) = 
     let (q, r) = spanP isAlphaNum s in
     case q of 
-      [] -> parseError p "State has to consist of at least one alphanumeric character." 
+      [] -> parseError p "State has to consist of at least one non-separator character." 
       _ -> return (State q, r)
 
 move :: ParseState -> Either String (Move, ParseState)
@@ -136,9 +136,6 @@ run d = go
                    MovedOffTape cfg -> MovedOffTape cfg
                    OK cfg -> go cfg
 
--- test = case (parseTransitions s, parseInput i) of
---          (Right cfg, Right inpt) -> run (buildMap cfg) (0, [], State "1", inpt)
---          _ -> undefined
 main = do
   machine <- newIORef Map.empty
   input <- newIORef (0, [], State "", [])
