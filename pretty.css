@@ -79,9 +79,8 @@ td {
 }
 
 #footer {
-    /* position:absolute; */
-    bottom:0;
-    width:100%;
+    clear:left;
+    width:500px;
     height:20px; 
     background:#abcdef;
     font-size:15px;
