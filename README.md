@@ -8,4 +8,4 @@ You can test it online [here][], where you can also find instructions on the inp
 
 [Haste compiler]: https://github.com/valderman/haste-compiler "Haste compiler"
 
-[here]: http://cs.au.dk/~abizjak/turingjs/turingjs.html "here"
+[here]: http://alesb.com/turingjs/turingjs.html "here"
